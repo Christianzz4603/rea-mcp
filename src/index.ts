@@ -1,5 +1,4 @@
 import express, { type NextFunction, type Request, type Response } from "express";
-import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -69,6 +68,8 @@ function createMcpServer(): McpServer {
       await writeFile(inputPath, bytes, { flag: "wx" });
       await store.createRecord({ id, filename: safeName, createdAt: new Date().toISOString(), status: "running" });
       const report = await ghidra.analyze(id, inputPath);
+      report.analysisId = id;
+      report.filename = safeName;
       await store.saveReport(id, report);
       await store.updateRecord(id, { status: "complete" });
       return textResult({

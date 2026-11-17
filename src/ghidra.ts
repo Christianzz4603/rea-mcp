@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { access, copyFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { AnalysisReport } from "./store.js";
 import { AnalysisStore } from "./store.js";
@@ -44,6 +44,7 @@ function run(command: string, args: string[], timeoutMs: number): Promise<string
 export class GhidraRunner {
   private readonly config: GhidraConfig;
   private readonly store: AnalysisStore;
+  private running = false;
 
   constructor(store: AnalysisStore) {
     this.store = store;
@@ -68,29 +69,33 @@ export class GhidraRunner {
   }
 
   async analyze(id: string, inputPath: string): Promise<AnalysisReport> {
-    const executable = path.join(this.config.home, "support", "analyzeHeadless");
-    const scriptSource = path.join(this.store.scriptPath(), "ExportAnalysis.java");
-    const scriptTarget = path.join(this.store.root, "scripts", "ExportAnalysis.java");
-    await copyFile(scriptSource, scriptTarget);
-    const outputPath = path.join(this.store.directory(id), "report.json");
-    const projectPath = this.store.projectPath(id);
-    const args = [
-      projectPath,
-      "project",
-      "-import", inputPath,
-      "-overwrite",
-      "-scriptPath", path.dirname(scriptTarget),
-      "-postScript", "ExportAnalysis.java",
-      outputPath,
-      String(this.config.maxFunctions),
-      String(this.config.maxDecompiles),
-      String(this.config.maxStrings),
-      String(this.config.maxInstructions)
-    ];
-    await run(executable, args, this.config.timeoutMs);
-    const { readFile } = await import("node:fs/promises");
-    const report = JSON.parse(await readFile(outputPath, "utf8")) as AnalysisReport;
-    report.analysisId = id;
-    return report;
+    if (this.running) throw new Error("The Ghidra worker is busy. Try again after the current analysis finishes.");
+    this.running = true;
+    try {
+      const executable = path.join(this.config.home, "support", "analyzeHeadless");
+      const scriptSource = path.join(this.store.scriptPath(), "ExportAnalysis.java");
+      const scriptTarget = path.join(this.store.root, "scripts", "ExportAnalysis.java");
+      await copyFile(scriptSource, scriptTarget);
+      const outputPath = path.join(this.store.directory(id), "report.json");
+      const projectPath = this.store.projectPath(id);
+      await mkdir(projectPath, { recursive: true });
+      const args = [
+        projectPath,
+        "project",
+        "-import", inputPath,
+        "-overwrite",
+        "-scriptPath", path.dirname(scriptTarget),
+        "-postScript", "ExportAnalysis.java",
+        outputPath,
+        String(this.config.maxFunctions),
+        String(this.config.maxDecompiles),
+        String(this.config.maxStrings),
+        String(this.config.maxInstructions)
+      ];
+      await run(executable, args, this.config.timeoutMs);
+      return JSON.parse(await readFile(outputPath, "utf8")) as AnalysisReport;
+    } finally {
+      this.running = false;
+    }
   }
 }
