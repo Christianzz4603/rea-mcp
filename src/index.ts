@@ -7,6 +7,7 @@ import { z } from "zod";
 import { AnalysisStore, type AnalysisReport } from "./store.js";
 import { GhidraRunner } from "./ghidra.js";
 import { boundedInteger, decodeBase64, safeEqualSecret, safeFilename } from "./validation.js";
+import { registerAnalysisTools } from "./analysis-tools.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const maxUploadMb = boundedInteger(Number(process.env.MAX_UPLOAD_MB ?? 64), 64, 1, 512);
@@ -193,6 +194,7 @@ function createMcpServer(): McpServer {
     } catch (error) { return errorResult(error); }
   });
 
+  registerAnalysisTools(server, store);
   return server;
 }
 
