@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: rea-mcp
+    runtime: docker
+    plan: standard
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+    disk:
+      name: rea-mcp-data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DATA_DIR
+        value: /var/data
+      - key: GHIDRA_HOME
+        value: /opt/ghidra
+      - key: MCP_API_KEY
+        generateValue: true
+      - key: MAX_UPLOAD_MB
+        value: "64"
+      - key: ANALYSIS_TIMEOUT_MS
+        value: "900000"
