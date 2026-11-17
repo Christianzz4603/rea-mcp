@@ -1,4 +1,9 @@
+FROM node:22-bookworm-slim AS node-runtime
+
 FROM eclipse-temurin:25-jre-noble
+
+# Add Node.js and npm to the Java runtime image for the MCP server.
+COPY --from=node-runtime /usr/local/ /usr/local/
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV GHIDRA_HOME=/opt/ghidra
