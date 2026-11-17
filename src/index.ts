@@ -39,7 +39,8 @@ function findFunction(report: AnalysisReport, query: string) {
   const exact = report.functions.find((fn) => fn.address.toLowerCase() === normalized || fn.name.toLowerCase() === normalized);
   if (exact) return exact;
   const matches = report.functions.filter((fn) => fn.name.toLowerCase().includes(normalized));
-  if (matches.length === 1) return matches[0];
+  const onlyMatch = matches[0];
+  if (matches.length === 1 && onlyMatch) return onlyMatch;
   if (matches.length > 1) {
     throw new Error(`More than one function matches. Use an exact function address. Matches: ${matches.slice(0, 20).map((fn) => `${fn.name} @ ${fn.address}`).join(", ")}`);
   }
